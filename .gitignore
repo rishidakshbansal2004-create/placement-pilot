@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+*.log
+placement-pilot-original/
+placement-pilot-backup/

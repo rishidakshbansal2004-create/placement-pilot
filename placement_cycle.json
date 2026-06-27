@@ -1,0 +1,169 @@
+{
+  "description": "Kicker -> run placement pipeline -> approve drafts -> loop-send via connectors -> done.",
+  "edges": [
+    {
+      "id": "e_kick_to_approve",
+      "label": null,
+      "source": "kick_off",
+      "target": "approve_drafts"
+    },
+    {
+      "id": "e_approve_to_decision",
+      "label": null,
+      "source": "approve_drafts",
+      "target": "any_to_send"
+    },
+    {
+      "id": "e_decision_to_end",
+      "label": "none approved (default)",
+      "source": "any_to_send",
+      "target": "end"
+    },
+    {
+      "id": "e_decision_to_send",
+      "label": null,
+      "source": "any_to_send",
+      "target": "send_each"
+    },
+    {
+      "id": "e_send_back_to_loop",
+      "label": null,
+      "source": "send_one",
+      "target": "send_each"
+    },
+    {
+      "id": "e_send_to_end",
+      "label": null,
+      "source": "send_each",
+      "target": "end"
+    }
+  ],
+  "icon_url": null,
+  "mode": "GLOBAL",
+  "name": "placement_cycle",
+  "nodes": [
+    {
+      "config": {
+        "function_name": "kick_off_parsed_resumes",
+        "input_mapping": {}
+      },
+      "id": "kick_off",
+      "label": "Run pipeline for each parsed resume",
+      "position": null,
+      "type": "FUNCTION"
+    },
+    {
+      "config": {
+        "assignee_pod_member_id": null,
+        "assignee_pod_member_id_expression": null,
+        "input_schema": {
+          "properties": {
+            "choices": {
+              "description": "Aggregated drafts from kick_off (one per outreach_messages row in the drafted_outreach_ids list). Toggle send=true to dispatch.",
+              "items": {
+                "properties": {
+                  "body_preview": {
+                    "type": "string"
+                  },
+                  "channel": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "outreach_id": {
+                    "type": "string"
+                  },
+                  "recipient": {
+                    "type": "string"
+                  },
+                  "send": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "subject": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "outreach_id",
+                  "channel"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "notes": {
+              "description": "Free-form note attached to the run.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "choices"
+          ],
+          "type": "object"
+        },
+        "ui_schema": null
+      },
+      "id": "approve_drafts",
+      "label": "Approve & pick drafts",
+      "position": null,
+      "type": "FORM"
+    },
+    {
+      "config": {
+        "rules": [
+          {
+            "condition": "length(approve_drafts.choices[?send == `true`]) > `0`",
+            "next_node_id": "send_each"
+          }
+        ]
+      },
+      "id": "any_to_send",
+      "label": "Anything approved?",
+      "position": null,
+      "type": "DECISION"
+    },
+    {
+      "config": {
+        "child_node_id": "send_one",
+        "item_var_name": "draft",
+        "items_path": "approve_drafts.choices[?send == `true`]"
+      },
+      "id": "send_each",
+      "label": "Send each approved draft",
+      "position": null,
+      "type": "LOOP"
+    },
+    {
+      "config": {
+        "function_name": "send_outreach",
+        "input_mapping": {
+          "outreach_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "loop.draft.outreach_id"
+          }
+        }
+      },
+      "id": "send_one",
+      "label": "Dispatch one draft",
+      "position": null,
+      "type": "FUNCTION"
+    },
+    {
+      "config": {},
+      "id": "end",
+      "label": "Done",
+      "position": null,
+      "type": "END"
+    }
+  ],
+  "start": {
+    "config": {
+      "schedule_type": "CRON"
+    },
+    "type": "SCHEDULED"
+  },
+  "visibility": "POD"
+}
