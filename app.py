@@ -667,12 +667,36 @@ def show_approvals(pod):
                 btn_label = "✅ Mark as Applied" if channel == "portal" else "✅ Approve & Send"
                 if st.button(btn_label, key=f"approve_{draft_id}", use_container_width=True, type="primary"):
                     try:
-                        pod.records.update("outreach_messages", draft_id, {
-                            "status": "approved",
-                            "approved_at": datetime.utcnow().isoformat()
-                        })
-                        st.success("✅ Approved!")
-                        st.rerun()
+                        if channel == "portal":
+                            pod.records.update("outreach_messages", draft_id, {
+                                "status": "sent",
+                                "sent_at": datetime.utcnow().isoformat()
+                            })
+                            st.success("✅ Marked as applied!")
+                            st.rerun()
+                        else:
+                            # Send via Gmail connector
+                            with st.spinner("Sending email..."):
+                                try:
+                                    result = pod.connectors.operations.execute(
+                                        auth_config="gmail",
+                                        operation="GMAIL_SEND_EMAIL",
+                                        payload={
+                                            "to": recipient,
+                                            "subject": subject or f"Opportunity — {job_title}",
+                                            "body": body,
+                                        },
+                                        account_id=os.getenv("GMAIL_ACCOUNT_ID", "")
+                                    )
+                                    pod.records.update("outreach_messages", draft_id, {
+                                        "status": "sent",
+                                        "approved_at": datetime.utcnow().isoformat(),
+                                        "sent_at": datetime.utcnow().isoformat()
+                                    })
+                                    st.success("✅ Email sent via Gmail!")
+                                    st.rerun()
+                                except Exception as send_err:
+                                    st.error(f"❌ Send failed: {send_err}")
                     except Exception as e:
                         st.error(f"Failed: {e}")
             with col2:
