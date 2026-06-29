@@ -28,7 +28,8 @@ type Page = 'dashboard' | 'hunt' | 'pipeline' | 'approvals' | 'resume' | 'profil
 function Onboarding({ onCreate }: { onCreate: () => void }) {
   const createProfile = useCreateRecord({ client: lemmaClient, tableName: 'user_profiles' })
   const [form, setForm] = useState({
-    name: '', roles: '', locations: '', experience: 'intern', company_prefs: '', channels: ['email']
+    name: '', roles: '', locations: '', experience: 'intern', company_prefs: '', channels: ['email'],
+    telegram_bot_token: '', telegram_chat_id: ''
   })
   const [error, setError] = useState('')
 
@@ -43,6 +44,8 @@ function Onboarding({ onCreate }: { onCreate: () => void }) {
         experience_level: form.experience,
         company_prefs: form.company_prefs.split(',').map(c => c.trim()).filter(Boolean),
         channels: form.channels,
+        telegram_bot_token: form.telegram_bot_token || '',
+        telegram_chat_id: form.telegram_chat_id || '',
         is_active: true,
       })
       onCreate()
@@ -91,6 +94,19 @@ function Onboarding({ onCreate }: { onCreate: () => void }) {
             </label>
           ))}
         </div>
+
+        <hr style={{ borderColor: '#2d3250', margin: '16px 0' }} />
+        <p style={{ fontSize: 13, color: '#8b92a5', marginBottom: 12 }}>
+          📱 <strong style={{ color: '#e2e8f0' }}>Telegram Notifications</strong> (optional) — get notified when jobs are found and emails are drafted.
+        </p>
+        <label className="field-label">Telegram Bot Token</label>
+        <input className="input" type="password" placeholder="8404655790:AAH..."
+          value={form.telegram_bot_token}
+          onChange={e => setForm(f => ({ ...f, telegram_bot_token: e.target.value }))} />
+        <label className="field-label">Telegram Chat ID</label>
+        <input className="input" placeholder="1622560998"
+          value={form.telegram_chat_id}
+          onChange={e => setForm(f => ({ ...f, telegram_chat_id: e.target.value }))} />
 
         {error && <div className="alert-warn">{error}</div>}
         <button className="btn-primary btn-large" onClick={submit} disabled={createProfile.isSubmitting}>
@@ -369,6 +385,12 @@ function Approvals({ drafts, jobs }: any) {
         import.meta.env.VITE_GMAIL_ACCOUNT_ID || ''
       )
       await updateDraft.update({ status: 'sent', sent_at: new Date().toISOString() }, { recordId: draft.id })
+      // Send Telegram notification
+      try {
+        await (lemmaClient as any).functions.run('send_telegram', {
+          message: `✅ Email sent!\n📋 ${draft.subject || 'Outreach'}\n📧 To: ${draft.recipient}`
+        })
+      } catch (_) {}
       setDoneIds(prev => [...prev, draft.id])
     } catch (e: any) {
       alert(`Send failed: ${e.message}`)
@@ -540,6 +562,8 @@ function Profile({ profile, onSave }: any) {
     experience: profile?.experience_level || 'intern',
     company_prefs: parseJson(profile?.company_prefs).join(', '),
     channels: parseJson(profile?.channels).length ? parseJson(profile.channels) : ['email'],
+    telegram_bot_token: (profile?.telegram_bot_token as string) || '',
+    telegram_chat_id: (profile?.telegram_chat_id as string) || '',
   })
   const [msg, setMsg] = useState('')
 
@@ -552,6 +576,8 @@ function Profile({ profile, onSave }: any) {
         experience_level: form.experience,
         company_prefs: form.company_prefs.split(',').map(c => c.trim()).filter(Boolean),
         channels: form.channels,
+        telegram_bot_token: form.telegram_bot_token || '',
+        telegram_chat_id: form.telegram_chat_id || '',
       }, { recordId: profile.id })
       setMsg('✅ Profile saved!')
       onSave()
@@ -594,6 +620,22 @@ function Profile({ profile, onSave }: any) {
             </label>
           ))}
         </div>
+
+        <hr style={{ borderColor: '#2d3250', margin: '16px 0' }} />
+        <p style={{ fontSize: 13, color: '#8b92a5', marginBottom: 12 }}>
+          📱 <strong style={{ color: '#e2e8f0' }}>Telegram Notifications</strong> (optional)
+        </p>
+        <label className="field-label">Bot Token</label>
+        <input className="input" type="password" value={form.telegram_bot_token}
+          onChange={e => setForm(f => ({ ...f, telegram_bot_token: e.target.value }))}
+          placeholder="8404655790:AAH..." />
+        <label className="field-label">Chat ID</label>
+        <input className="input" value={form.telegram_chat_id}
+          onChange={e => setForm(f => ({ ...f, telegram_chat_id: e.target.value }))}
+          placeholder="1622560998" />
+        <p className="muted" style={{ marginBottom: 16, fontSize: 12 }}>
+          Create a bot via @BotFather → get Chat ID by messaging your bot then checking getUpdates
+        </p>
 
         <button className="btn-primary" onClick={save} disabled={updateProfile.isSubmitting}>
           {updateProfile.isSubmitting ? '⏳ Saving...' : '💾 Save Profile'}
