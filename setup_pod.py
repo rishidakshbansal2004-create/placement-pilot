@@ -122,18 +122,22 @@ def setup_tables(pod):
         "name": "user_profiles",
         "enable_rls": True,
         "columns": [
-            {"name": "name",             "type": "TEXT",    "required": True},
-            {"name": "target_roles",     "type": "JSON",    "required": True,
+            {"name": "name",                 "type": "TEXT",    "required": True},
+            {"name": "target_roles",         "type": "JSON",    "required": True,
              "description": '["ML Engineer Intern", "GenAI Engineer"]'},
-            {"name": "locations",        "type": "JSON",    "required": True,
+            {"name": "locations",            "type": "JSON",    "required": True,
              "description": '["Remote", "Bangalore"]'},
-            {"name": "experience_level", "type": "ENUM",    "required": True,
+            {"name": "experience_level",     "type": "ENUM",    "required": True,
              "options": ["intern", "fresher", "junior", "mid", "senior"]},
-            {"name": "company_prefs",    "type": "JSON",    "required": False,
+            {"name": "company_prefs",        "type": "JSON",    "required": False,
              "description": '["startups", "product companies"]'},
-            {"name": "channels",         "type": "JSON",    "required": False,
+            {"name": "channels",             "type": "JSON",    "required": False,
              "description": '["email", "linkedin"]'},
-            {"name": "is_active",        "type": "BOOLEAN", "required": False,
+            {"name": "telegram_bot_token",   "type": "TEXT",    "required": False,
+             "description": "Telegram bot token for notifications"},
+            {"name": "telegram_chat_id",     "type": "TEXT",    "required": False,
+             "description": "Telegram chat ID for notifications"},
+            {"name": "is_active",            "type": "BOOLEAN", "required": False,
              "default": True},
         ],
     }, "user_profiles")
@@ -376,6 +380,7 @@ STEP 2 — Decide outreach strategy based on source
 If source is internshala, unstop, cutshort, indeed, glassdoor:
   → PORTAL APPLY strategy
   → Write ONE outreach_messages row: channel='portal', recipient=source_url, body='Apply directly: '+source_url, status='drafted'
+  → Call function_send_telegram with message: "🌐 Portal job found!\n📋 {title} @ {company}\n🔗 Apply: {source_url}"
   → Return immediately
 
 If source is linkedin → draft LinkedIn DM
@@ -399,7 +404,11 @@ STEP 5 — Write outreach_messages row
 channel, recipient, subject (email only), body, status='drafted'
 Skip if matching row already exists with status in (drafted, waiting_approval, approved, sent).
 
-STEP 6 — Return outreach_ids, strategy used, recipient_guessed
+STEP 6 — Send Telegram notification
+After writing the outreach_messages row, call function_send_telegram with:
+message: "✉️ New email draft ready!\n📋 {subject}\n🏢 {company}\n\nOpen Placement Pilot to review and approve."
+
+STEP 7 — Return outreach_ids, strategy used, recipient_guessed
 
 BOUNDARIES
 - DO NOT mark drafts as approved, sent, or replied
@@ -734,6 +743,46 @@ async def kick_off_parsed_resumes(ctx: FunctionContext, data: Optional[KickOffIn
     return result
 '''
 
+SEND_TELEGRAM_CODE = '''#input_type_name: SendTelegramInput
+#output_type_name: SendTelegramResult
+#function_name: send_telegram
+from pydantic import BaseModel
+from lemma_sdk import Pod
+import urllib.request
+import json as _json
+
+class SendTelegramInput(BaseModel):
+    message: str
+    resume_id: str | None = None
+
+class SendTelegramResult(BaseModel):
+    sent: bool
+    error: str | None = None
+
+async def send_telegram(ctx: FunctionContext, data: SendTelegramInput) -> SendTelegramResult:
+    pod = Pod.from_env()
+    # Get telegram credentials from user_profiles
+    result = pod.records.list("user_profiles", limit=1)
+    if hasattr(result, 'to_dict'):
+        result = result.to_dict()
+    items = result.get("items", []) if isinstance(result, dict) else []
+    if not items:
+        return SendTelegramResult(sent=False, error="No user profile found")
+    profile = items[0]
+    bot_token = profile.get("telegram_bot_token", "")
+    chat_id = profile.get("telegram_chat_id", "")
+    if not bot_token or not chat_id:
+        return SendTelegramResult(sent=False, error="Telegram not configured in profile")
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = _json.dumps({"chat_id": chat_id, "text": data.message, "parse_mode": "HTML"}).encode()
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=10)
+        return SendTelegramResult(sent=True)
+    except Exception as e:
+        return SendTelegramResult(sent=False, error=str(e))
+'''
+
 
 def setup_functions(pod):
     print("\n⚙️  Creating functions...")
@@ -741,6 +790,8 @@ def setup_functions(pod):
                     "Score and persist a (resume, job) pair. Deterministic overlap score, written to job_matches.")
     create_function(pod, "kick_off_parsed_resumes", KICK_OFF_CODE,
                     "Read every resumes row with status='parsed' and run placement_runner for each one.")
+    create_function(pod, "send_telegram", SEND_TELEGRAM_CODE,
+                    "Send a Telegram notification using the bot token stored in user_profiles.")
 
 
 def update_functions(pod):
@@ -749,6 +800,8 @@ def update_functions(pod):
                     "Score and persist a (resume, job) pair. Deterministic overlap score, written to job_matches.")
     update_function(pod, "kick_off_parsed_resumes", KICK_OFF_CODE,
                     "Read every resumes row with status='parsed' and run placement_runner for each one.")
+    update_function(pod, "send_telegram", SEND_TELEGRAM_CODE,
+                    "Send a Telegram notification using the bot token stored in user_profiles.")
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────

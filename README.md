@@ -1,5 +1,5 @@
 # 🚀 Placement Pilot
-**GET YOURSELF A  FULLY REPRODUCIBLE PLACEMENT PILOT WITHIN MINUTES**
+
 > Your AI co-pilot for campus placements — hunting jobs, scoring matches, and drafting personalised recruiter emails autonomously every morning at 8 AM.
 
 Built for the **Gappy AI Hackathon (June 2026)** on the [Lemma](https://lemma.work) platform.
@@ -159,7 +159,21 @@ Add to `.env`:
 GMAIL_ACCOUNT_ID=paste_id_here
 ```
 
-### Step 6 — Add Morning Schedule
+### Step 6 — Set Up Telegram Notifications (Optional)
+
+Get notified on Telegram when jobs are found and emails are drafted.
+
+1. Open Telegram → message **@BotFather** → send `/newbot`
+2. Follow prompts → copy the **API token**
+3. Send any message to your new bot
+4. Get your Chat ID:
+```bash
+curl "https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates"
+# Copy the chat.id from the response
+```
+5. After setting up the app → go to **👤 Profile** → enter Bot Token + Chat ID → save
+
+### Step 8 — Add Morning Schedule
 
 1. lemma.work → your pod → **Schedules** → **New Schedule**
 2. Type: **Time** | Cron: `0 8 * * 1-5` | Target: `placement_cycle`
@@ -167,7 +181,7 @@ GMAIL_ACCOUNT_ID=paste_id_here
 
 Autonomous job hunting now runs every weekday at 8 AM.
 
-### Step 7A — Run Streamlit App (Local)
+### Step 9A — Run Streamlit App (Local)
 
 ```bash
 streamlit run app.py
@@ -176,7 +190,7 @@ streamlit run app.py
 
 First time → fill profile form → upload resume → run hunt → approve emails.
 
-### Step 7B — Deploy Lemma App (Hosted on lemma.work)
+### Step 9B — Deploy Lemma App (Hosted on lemma.work)
 
 ```bash
 cd placement-pilot-app

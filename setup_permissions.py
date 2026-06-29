@@ -103,14 +103,13 @@ def setup_agent_permissions(pod):
 
     # resume_parser — writes resumes table (file access via WORKSPACE_CLI toolset)
     pod.agents.replace_permissions("resume_parser", AgentPermissionsReplaceRequest(
-    grants=[
-        agent_grant("resumes", "datastore_table", TABLE_WRITE),
-        agent_grant("/resumes", "folder", ["folder.read"]),
-    ]
-))
+        grants=[
+            agent_grant("resumes", "datastore_table", TABLE_WRITE),
+        ]
+    ))
     print("  ✅ resume_parser")
 
-    # outreach_composer — reads everything, writes outreach_messages
+    # outreach_composer — reads everything, writes outreach_messages, calls send_telegram
     pod.agents.replace_permissions("outreach_composer", AgentPermissionsReplaceRequest(
         grants=[
             agent_grant("job_matches",       "datastore_table", TABLE_READ),
@@ -118,6 +117,7 @@ def setup_agent_permissions(pod):
             agent_grant("resumes",           "datastore_table", TABLE_READ),
             agent_grant("outreach_messages", "datastore_table", TABLE_WRITE),
             agent_grant("user_profiles",     "datastore_table", TABLE_READ),
+            agent_grant("send_telegram",     "function",        FN_PERMS),
         ]
     ))
     print("  ✅ outreach_composer")
@@ -149,6 +149,14 @@ def setup_function_permissions(pod):
         ]
     ))
     print("  ✅ kick_off_parsed_resumes")
+
+    # send_telegram — reads user_profiles for bot token + chat_id
+    pod.functions.replace_permissions("send_telegram", FunctionPermissionsReplaceRequest(
+        grants=[
+            fn_grant("user_profiles", "datastore_table", TABLE_READ),
+        ]
+    ))
+    print("  ✅ send_telegram")
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
