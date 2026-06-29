@@ -46,10 +46,10 @@ body {
 .page { max-width: 900px; }
 
 /* Onboarding */
-.onboarding-wrap { max-width: 600px; margin: 0 auto; padding: 32px; }
+.onboarding-wrap { max-width: 600px; margin: 0 auto; padding: 32px; height: 100vh; overflow-y: auto; }
 .onboarding-card {
   background: #1e2130; border: 1px solid #2d3250;
-  border-radius: 12px; padding: 32px;
+  border-radius: 12px; padding: 32px; margin-bottom: 32px;
 }
 .onboarding-card h2 { margin-bottom: 4px; }
 
