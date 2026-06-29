@@ -1,9 +1,13 @@
 .env
+.env.local
 __pycache__/
 *.pyc
 .venv/
 venv/
 .DS_Store
 *.log
+placement-pilot-app/.env.local
 placement-pilot-original/
 placement-pilot-backup/
+node_modules/
+dist/

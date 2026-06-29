@@ -119,23 +119,9 @@ def setup_tables(pod):
     print("\n📦 Creating tables...")
 
     create_table(pod, {
-        "name": "users",
-        "enable_rls": False,
-        "columns": [
-            {"name": "name",          "type": "TEXT", "required": True},
-            {"name": "email",         "type": "TEXT", "required": True,
-             "description": "Unique email address for login"},
-            {"name": "password_hash", "type": "TEXT", "required": True,
-             "description": "SHA-256 hash of password"},
-        ],
-    }, "users")
-
-    create_table(pod, {
         "name": "user_profiles",
         "enable_rls": True,
         "columns": [
-            {"name": "app_user_id",      "type": "TEXT",    "required": False,
-             "description": "Links to users.id for app-level multi-user support"},
             {"name": "name",             "type": "TEXT",    "required": True},
             {"name": "target_roles",     "type": "JSON",    "required": True,
              "description": '["ML Engineer Intern", "GenAI Engineer"]'},

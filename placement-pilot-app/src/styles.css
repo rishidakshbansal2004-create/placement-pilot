@@ -1,0 +1,200 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0f1117;
+  color: #e2e8f0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-layout { display: flex; height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  background: #161a27;
+  border-right: 1px solid #2d3250;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 16px;
+  border-bottom: 1px solid #2d3250;
+  margin-bottom: 8px;
+}
+.brand strong { font-size: 15px; color: #e2e8f0; }
+
+.nav-btn {
+  display: block; width: 100%; text-align: left;
+  padding: 10px 12px; border-radius: 8px; border: none;
+  background: transparent; color: #8b92a5;
+  cursor: pointer; font-size: 14px; transition: all 0.15s;
+}
+.nav-btn:hover { background: #1e2130; color: #e2e8f0; }
+.nav-btn.active { background: #667eea22; color: #667eea; font-weight: 600; }
+
+/* Content */
+.content { flex: 1; overflow-y: auto; padding: 32px; }
+.page { max-width: 900px; }
+
+/* Onboarding */
+.onboarding-wrap { max-width: 600px; margin: 0 auto; padding: 32px; }
+.onboarding-card {
+  background: #1e2130; border: 1px solid #2d3250;
+  border-radius: 12px; padding: 32px;
+}
+.onboarding-card h2 { margin-bottom: 4px; }
+
+/* Hero */
+.hero-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 28px 32px; border-radius: 12px; margin-bottom: 24px;
+}
+.hero-banner h1 { font-size: 28px; color: white; margin-bottom: 6px; }
+.hero-banner p { color: rgba(255,255,255,0.85); font-size: 15px; }
+
+/* Metrics */
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.metric-card {
+  background: #1e2130; border: 1px solid #2d3250;
+  border-radius: 10px; padding: 20px; text-align: center;
+}
+.metric-num { font-size: 2rem; font-weight: 700; color: #667eea; }
+.metric-label { font-size: 13px; color: #8b92a5; margin-top: 4px; }
+
+/* Two col */
+.two-col { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+
+/* Panel */
+.panel {
+  background: #1e2130; border: 1px solid #2d3250;
+  border-radius: 10px; padding: 20px; margin-bottom: 16px;
+}
+.panel h3 { font-size: 15px; margin-bottom: 16px; color: #e2e8f0; }
+
+/* Scores */
+.score-high { color: #48bb78; font-weight: 700; }
+.score-mid { color: #ed8936; font-weight: 700; }
+.score-low { color: #fc8181; font-weight: 700; }
+
+/* Match row */
+.match-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid #2d3250;
+}
+.match-row:last-child { border-bottom: none; }
+
+/* Match card */
+.match-card {
+  background: #1e2130; border: 1px solid #2d3250;
+  border-radius: 10px; padding: 16px; margin-bottom: 12px;
+}
+.match-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+
+/* Draft card */
+.draft-card {
+  background: #1a1f35; border: 1px solid #2d3250;
+  border-left: 4px solid #667eea; border-radius: 8px;
+  padding: 20px; margin-bottom: 16px;
+}
+.draft-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px; }
+.draft-body {
+  background: #0f1117; border: 1px solid #2d3250; border-radius: 6px;
+  padding: 12px; font-size: 13px; line-height: 1.6;
+  white-space: pre-wrap; max-height: 200px; overflow-y: auto; margin-bottom: 12px;
+}
+.draft-actions { display: flex; gap: 10px; }
+
+/* Job row */
+.job-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid #2d3250;
+}
+.job-row:last-child { border-bottom: none; }
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white; border: none; padding: 10px 20px;
+  border-radius: 8px; cursor: pointer; font-weight: 600;
+  font-size: 14px; transition: opacity 0.15s; display: inline-block;
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-large { padding: 14px 32px; font-size: 16px; width: 100%; }
+
+.btn-secondary {
+  background: #2d3250; color: #e2e8f0; border: none;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  font-size: 14px; text-decoration: none; display: inline-block;
+}
+.btn-secondary:hover { background: #3d4260; }
+
+/* Badges */
+.success-badge {
+  background: #1c4532; color: #68d391;
+  padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;
+}
+.alert-warn {
+  background: #44337a33; color: #d6bcfa;
+  padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;
+}
+.alert-banner {
+  background: #744210; color: #fbd38d; padding: 12px 16px;
+  border-radius: 8px; margin-bottom: 12px;
+  display: flex; flex-direction: column; font-size: 14px;
+}
+.schedule-badge {
+  background: #1c4532; color: #68d391;
+  padding: 8px 12px; border-radius: 6px; font-size: 12px; text-align: center;
+}
+.badge {
+  background: #2d3250; color: #a0aec0;
+  padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+}
+
+/* Controls */
+.controls { display: flex; flex-direction: column; gap: 16px; margin: 20px 0; }
+.controls label { font-size: 14px; color: #8b92a5; display: flex; flex-direction: column; gap: 6px; }
+.controls input[type="range"] { accent-color: #667eea; }
+
+/* Fields */
+.field-label { display: block; font-size: 13px; color: #8b92a5; margin-bottom: 6px; }
+.input {
+  width: 100%; background: #0f1117; border: 1px solid #2d3250;
+  border-radius: 8px; padding: 10px 14px; color: #e2e8f0;
+  font-size: 14px; margin-bottom: 16px; font-family: inherit;
+}
+.input:focus { outline: none; border-color: #667eea; }
+
+select.input { cursor: pointer; }
+
+select:not(.input) {
+  background: #1e2130; border: 1px solid #2d3250;
+  border-radius: 6px; padding: 6px 10px;
+  color: #e2e8f0; font-size: 13px;
+}
+
+code {
+  background: #2d3250; padding: 2px 6px;
+  border-radius: 4px; font-size: 12px;
+}
+
+.muted { color: #8b92a5; font-size: 13px; }
+
+.status-msg {
+  padding: 10px 16px; background: #1e2130;
+  border: 1px solid #2d3250; border-radius: 8px; font-size: 14px;
+}
+
+h2 { font-size: 22px; margin-bottom: 8px; color: #e2e8f0; }
+h3 { font-size: 16px; color: #e2e8f0; }
+a { color: #667eea; }
