@@ -9,6 +9,9 @@ import {
   useUpdateRecord,
   useUploadFile,
   useAgentTask,
+  useSchedules,
+  useCreateSchedule,
+  useDeleteSchedule,
 } from 'lemma-sdk/react'
 import { lemmaClient } from './lemma-client'
 import './styles.css'
@@ -141,8 +144,8 @@ function Nav({ page, setPage, pendingCount, userName }: { page: Page; setPage: (
           {item.icon} {item.label}
         </button>
       ))}
-      <div style={{ marginTop: 'auto', padding: '12px 8px' }}>
-        <div className="schedule-badge">⏰ Morning hunt: 8 AM weekdays</div>
+      <div style={{ marginTop: 'auto', padding: '12px 8px', fontSize: 11, color: '#8b92a5', textAlign: 'center' }}>
+        Placement Pilot v1
       </div>
     </nav>
   )
@@ -154,6 +157,8 @@ function Dashboard({ jobs, matches, drafts, resumes, setPage }: any) {
   const sent = drafts.filter((d: any) => d.status === 'sent')
   const highMatches = matches.filter((m: any) => parseFloat(m.score || 0) >= 60)
   const hasParsedResume = resumes.some((r: any) => r.status === 'parsed')
+  const schedulesQ = useSchedules({ client: lemmaClient, workflowName: 'placement_cycle' })
+  const hasSchedule = schedulesQ.schedules.length > 0
 
   return (
     <div className="page">
@@ -218,6 +223,11 @@ function Dashboard({ jobs, matches, drafts, resumes, setPage }: any) {
           <button className="btn-primary" style={{ width: '100%', marginBottom: 10 }} onClick={() => setPage('hunt')}>
             🔍 Run Hunt Now
           </button>
+          {hasSchedule
+            ? <div className="schedule-badge" style={{ cursor: 'default' }}>⏰ Morning hunt: active ✅</div>
+            : <div className="alert-warn" style={{ fontSize: 12, cursor: 'pointer' }} onClick={() => setPage('profile')}>⚠️ No schedule — click to enable</div>
+          }
+          <ScheduleManager />
         </div>
       </div>
     </div>
@@ -380,7 +390,7 @@ function Approvals({ drafts, jobs }: any) {
         {
           recipient_email: draft.recipient,
           subject: draft.subject || 'Internship Opportunity',
-          message_body: draft.body,
+          message_body: String(draft.body || ''),
         },
         import.meta.env.VITE_GMAIL_ACCOUNT_ID || ''
       )
@@ -548,6 +558,98 @@ function MyResume({ resumes, onRefresh }: any) {
         </button>
         {msg && <div className="status-msg" style={{ marginTop: 12 }}>{msg}</div>}
       </div>
+    </div>
+  )
+}
+
+// ── Schedule ───────────────────────────────────────────────────────────────────
+function ScheduleManager() {
+  const schedulesQ = useSchedules({ client: lemmaClient, workflowName: 'placement_cycle' })
+  const createSchedule = useCreateSchedule({ client: lemmaClient })
+  const deleteSchedule = useDeleteSchedule({ client: lemmaClient })
+  const [msg, setMsg] = useState('')
+  const [hour, setHour] = useState('8')
+  const [days, setDays] = useState('1-5') // 1-5 = weekdays
+
+  const existing = schedulesQ.schedules[0] || null
+
+  // Convert IST hour to UTC cron expression
+  // IST = UTC + 5:30, so 8:00 IST = 2:30 UTC → cron: 30 2
+  const getCron = () => {
+    const h = parseInt(hour)
+    // Subtract 5 hours 30 minutes
+    let utcHour = h - 6  // subtract 6 because of the 30 min offset
+    let utcMin = 30
+    utcHour = ((utcHour % 24) + 24) % 24
+    return `${utcMin} ${utcHour} * * ${days}`
+  }
+
+  const enable = async () => {
+    try {
+      await createSchedule.create({
+        name: 'morning-hunt',
+        schedule_type: 'TIME' as any,
+        workflow_name: 'placement_cycle',
+        config: { cron: getCron() },
+        visibility: 'POD',
+      })
+      setMsg(`✅ Schedule enabled! Hunt runs at ${hour}:00 AM IST on selected days.`)
+      schedulesQ.refresh()
+    } catch (e: any) {
+      setMsg(`❌ Failed: ${e.message}`)
+    }
+  }
+
+  const disable = async () => {
+    if (!existing) return
+    try {
+      await deleteSchedule.remove({ scheduleId: existing.id })
+      setMsg('✅ Schedule disabled.')
+      schedulesQ.refresh()
+    } catch (e: any) {
+      setMsg(`❌ Failed: ${e.message}`)
+    }
+  }
+
+  return (
+    <div className="panel" style={{ marginTop: 16 }}>
+      <h3>⏰ Morning Hunt Schedule</h3>
+      <p className="muted" style={{ marginBottom: 16 }}>Automatically hunt jobs on a schedule.</p>
+
+      {schedulesQ.isLoading ? (
+        <p className="muted">Loading...</p>
+      ) : existing ? (
+        <div>
+          <div className="success-badge">✅ Schedule active</div>
+          <button className="btn-secondary" onClick={disable} disabled={deleteSchedule.isSubmitting} style={{ marginTop: 8 }}>
+            {deleteSchedule.isSubmitting ? '⏳ Disabling...' : '🔴 Disable Schedule'}
+          </button>
+        </div>
+      ) : (
+        <div>
+          <div className="alert-warn" style={{ marginBottom: 16 }}>⚠️ No schedule — hunts run manually only</div>
+
+          <label className="field-label">Run at (IST hour)</label>
+          <select className="input" value={hour} onChange={e => setHour(e.target.value)}>
+            {Array.from({length: 24}, (_, i) => (
+              <option key={i} value={String(i)}>{String(i).padStart(2,'0')}:00 IST</option>
+            ))}
+          </select>
+
+          <label className="field-label">Days</label>
+          <select className="input" value={days} onChange={e => setDays(e.target.value)}>
+            <option value="1-5">Weekdays (Mon–Fri)</option>
+            <option value="1,3,5">Mon, Wed, Fri</option>
+            <option value="1,2,3,4,5,6,0">Every day</option>
+            <option value="1">Mondays only</option>
+          </select>
+
+          <button className="btn-primary" onClick={enable} disabled={createSchedule.isSubmitting}>
+            {createSchedule.isSubmitting ? '⏳ Enabling...' : '🟢 Enable Schedule'}
+          </button>
+        </div>
+      )}
+      {msg && <div className="status-msg" style={{ marginTop: 12 }}>{msg}</div>}
     </div>
   )
 }

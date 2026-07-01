@@ -675,30 +675,8 @@ async def _run_pipeline_for_resume(pod: Pod, resume: dict, cfg: KickOffInput) ->
         directive = json.dumps({"resume_id": rid, "max_hunt": cfg.max_hunt, "max_drafts": cfg.max_drafts, "min_score": cfg.min_score, "channels": list(cfg.channels)}, separators=(",", ":"))
         conv = pod.agents.run("placement_runner", directive)
         conv_id = str(getattr(conv, "id", conv))
-        deadline = time.time() + cfg.resume_timeout_sec
-        last_status = None
-        cur_d: dict = {}
-        while time.time() < deadline:
-            try:
-                cur = pod.conversations.get(conv_id)
-            except Exception as poll_exc:
-                out.setdefault("poll_warnings", []).append(str(poll_exc))
-                await asyncio.sleep(cfg.poll_interval_sec)
-                continue
-            cur_d = _to_plain(cur)
-            last_status = (cur_d.get("last_run_status") or cur_d.get("status") or "").upper() or None
-            if last_status in {"COMPLETED", "FAILED", "STOPPED", "CANCELLED"}:
-                break
-            await asyncio.sleep(cfg.poll_interval_sec)
-        if last_status != "COMPLETED":
-            out["status"] = "failed"
-            out["error"] = f"placement_runner ended in state={last_status}"
-            return out
-        agent_output = cur_d.get("output") or {}
-        drafted = agent_output.get("drafted_outreach_ids") or []
-        if not isinstance(drafted, list):
-            drafted = []
-        out.update({"status": "completed", "new_jobs": int(agent_output.get("new_jobs") or 0), "scored": int(agent_output.get("scored") or 0), "matches_above_threshold": int(agent_output.get("matches_above_threshold") or 0), "drafted_outreach_ids": drafted, "errors": list(agent_output.get("errors") or [])})
+        # Fire-and-forget: don't poll, just return conversation ID
+        out.update({"status": "started", "conversation_id": conv_id})
         return out
     except Exception as exc:
         out["status"] = "failed"
@@ -709,17 +687,17 @@ async def kick_off_parsed_resumes(ctx: FunctionContext, data: Optional[KickOffIn
     cfg = data or KickOffInput()
     pod = Pod.from_env()
     started = _now_iso()
-    listing = pod.records.list("resumes", limit=500, filter=[{"field": "status", "op": "eq", "value": "parsed"}])
+    listing = pod.records.list("resumes", limit=500, filter=[{"field": "status", "op": "in", "value": ["parsed", "raw"]}])
     listing_d = _to_plain(listing)
     raw_items = listing_d.get("items") or []
     parsed_resumes: List = []
     for r in raw_items:
-        if isinstance(r, dict) and r.get("status") == "parsed":
+        if isinstance(r, dict) and r.get("status") in ("parsed", "raw"):
             parsed_resumes.append({"id": str(r.get("id")), "label": r.get("label") or ""})
     result = KickOffResult(resume_ids=[r["id"] for r in parsed_resumes], parsed_resume_count=len(parsed_resumes), started_at=started)
     if not parsed_resumes:
         result.finished_at = _now_iso()
-        result.errors.append("No resumes with status=\'parsed\' found.")
+        result.errors.append("No resumes with status='parsed' or 'raw' found.")
         return result
     for resume in parsed_resumes:
         summary = await _run_pipeline_for_resume(pod, resume, cfg)
