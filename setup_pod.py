@@ -631,7 +631,7 @@ POLL_INTERVAL_SEC = 2.0
 DEFAULT_RESUME_TIMEOUT_SEC = 600.0
 DEFAULT_MAX_HUNT = 25
 DEFAULT_MAX_DRAFTS = 5
-DEFAULT_MIN_SCORE = 55
+DEFAULT_MIN_SCORE = 45
 DEFAULT_CHANNELS = ["email"]
 
 class KickOffInput(BaseModel):
@@ -673,10 +673,18 @@ async def _run_pipeline_for_resume(pod: Pod, resume: dict, cfg: KickOffInput) ->
     out: dict = {"resume_id": rid, "label": label, "status": "pending"}
     try:
         directive = json.dumps({"resume_id": rid, "max_hunt": cfg.max_hunt, "max_drafts": cfg.max_drafts, "min_score": cfg.min_score, "channels": list(cfg.channels)}, separators=(",", ":"))
-        conv = pod.agents.run("placement_runner", directive)
-        conv_id = str(getattr(conv, "id", conv))
-        # Fire-and-forget: don't poll, just return conversation ID
-        out.update({"status": "started", "conversation_id": conv_id})
+        # Run in thread with very short timeout — fire and forget
+        loop = asyncio.get_event_loop()
+        try:
+            conv = await asyncio.wait_for(
+                loop.run_in_executor(None, lambda: pod.agents.run("placement_runner", directive)),
+                timeout=10.0  # give up waiting after 10s, agent keeps running
+            )
+            conv_id = str(getattr(conv, "id", conv))
+            out.update({"status": "started", "conversation_id": conv_id})
+        except asyncio.TimeoutError:
+            # Agent was triggered but we didn't get the response in time — that's OK
+            out.update({"status": "triggered", "note": "Agent started, response awaited beyond timeout"})
         return out
     except Exception as exc:
         out["status"] = "failed"
@@ -687,7 +695,7 @@ async def kick_off_parsed_resumes(ctx: FunctionContext, data: Optional[KickOffIn
     cfg = data or KickOffInput()
     pod = Pod.from_env()
     started = _now_iso()
-    listing = pod.records.list("resumes", limit=500, filter=[{"field": "status", "op": "in", "value": ["parsed", "raw"]}])
+    listing = pod.records.list("resumes", limit=500)
     listing_d = _to_plain(listing)
     raw_items = listing_d.get("items") or []
     parsed_resumes: List = []
